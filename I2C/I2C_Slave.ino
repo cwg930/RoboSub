@@ -4,8 +4,10 @@
 //  something not-conflicting
 #define ADDR 0x53
 
-int led = 13;
-
+//Initialize the message buffers
+// Each can hold up to 20 bytes
+char write[20] = { 0 };
+char read[20]  = { 0 };
 
 void setup()
 {
@@ -26,54 +28,107 @@ void setup()
 
 void loop()
 {
-  //Delay, change value as needed, but make sure to change corresponding delay in 
-  // the BBB I2C_Master code
   delay(100);
 }
 
-//For testing purposes, will be used to just send back a 
-// character from the range of 32 - 255
-int offset = 0;
-
-//Sends a character, and then moves to the next character
-//  When offset reaches 255, wrap back to 32
-//  Makes sure that only visible characters are sent
+//The count of messages to be read
+int read_count  = 0;
+//Count of messages to be written 
+int write_count = 0;
+int i = 0;
+//The Arduino has detected Master asking for a READ.
+//  The Arduino is the slave, so it should be unlikely for a
+//  a READ as the first thing to occur. So, a WRITE should have
+//  already been done, so based on the data gathered after the
+//  previous WRITE, write the requested data to the Master
 void requestEvent()
 {
-  //Increment offset through the visible characters
-  int x = offset++ % 224 + 32;
-  //Snark, remove before production
-  Serial.print("I wish to serve Master...");
-  //Write the character to the I2C buffer
-  Wire.write(x);
-  //For testing purposes, write the char to the Serial Monitor
-  Serial.println(x);
-
+  Serial.println("Writting");
+  //Check that there's a response to Master.
+  if (write_count > 3 && i < write_count)
+  {
+     Wire.write(write[i++]);
+  }
+  
+  if (i == write_count)
+  {
+    Serial.println("Write finished");
+    Serial.println(i, DEC);
+    Serial.println(write_count, DEC);
+    i = write_count = 0;
+  }
+  
 }
 
 //Because of the limitations on batch write on the BBB-side of the transmission,
 //  we'll only be reading a single byte at a time
 void receiveEvent(int n)
 {
-  int x = 0;
-  //Testing for what n is, it seems to be a count of the number
-  //  of the data being sent over I2C? Only seen 1 so far
-  Serial.print("The n is: ");
-  Serial.println(n);
-  
-  //Check if there is info over the wire, there should be
-  //  Real use will be for when we get batch writes working
-  //  The line will change to:
-  //  while(Wire.available(){ 
+  Serial.println("Reading...");
+  //The first byte sent is the count of bytes in the message
+  //  After comes the function we want performed
+  //  Then come the parameters to the function
   if (Wire.available())
-    //Read the data on the line
-    x = Wire.read();
+  {
+    read[read_count++] = Wire.read();
+    Serial.print("Read:");
+    Serial.println(read[read_count-1], HEX);
+    //If the read_count is equal to the total
+    //  expected bytes sent, the message is finished
+    //  send to lookup to perform the action and start filling
+    //  out the write buffer
+    Serial.println(read_count);
+    if (read_count == read[0])
+    {
+      Serial.println("Lookup the function");
+      lookup();
+    }
+    Serial.println(read_count);
+  }
+}
+
+void lookup()
+{
   
-  
-  //For testing purposes print it back to the Serial Monitor
-  // Ideally, we'd end up actually doing something with this...
-  // Once we figure out what to do, remove this and replace it with that
-  Serial.print("x is: ");
-  Serial.println(x);
-  Serial.println("Is this correct?");
+  switch(read[1])
+  {
+    case 0:
+    
+    break;
+    case 1:
+      //Testing, just copy read to write
+      for (i = 0; i < read_count; i++)
+        write[i] = read[i];
+      
+      i = 0;
+      write_count = read_count;
+      
+      clean_read_buffer();
+    break;
+    //...
+    default:
+      //Probably not going to be used...?
+	  //Error of some kind?
+    break;
+  }
+}
+
+//Cleans the buffer, also has side-effect of setting *_count
+// to 0
+void clean_read_buffer()
+{
+  for( ;read_count > 0; read_count--)
+  {
+    read[read_count] = 0;
+  }
+  read[read_count] = 0;
+}
+
+void clean_write_buffer()
+{
+  int i = 0;
+  for( ; i < 20; i ++)
+  {
+    write[i] = 0;
+  }
 }
