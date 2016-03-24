@@ -1,0 +1,50 @@
+#include <ros/ros.h>
+#include <geometry_msgs/Twist.h>
+
+#include <sensor_msgs/Joy.h>
+
+class ThrustControl {
+  ros::NodeHandle nh_;
+  ros::Subscriber trans_sub;
+  ros::Subscriber rot_sub;
+  ros::Publisher twist_pub;
+  
+  geometry_msgs::Twist twistMsg;
+
+public:
+  ThrustControl()
+  {
+    trans_sub = nh_.subscribe("/trans/joy", 1, &ThrustControl::translateCb, this);
+    rot_sub = nh_.subscribe("/rot/joy", 1, &ThrustControl::rotateCb, this);
+    
+    twist_pub = nh_.advertise<geometry_msgs::Twist>("robosub/thrustControl", 1000);
+  }
+  void init()
+  {
+    while(ros::ok()) {
+      
+    }
+
+  }
+
+  void translateCb(const sensor_msgs::Joy &msg)
+  {
+    if(sizeof(msg.axes)/sizeof(float) < 3) {
+      ROS_INFO("JOYSTICK ERROR");
+      return;
+    }
+    twistMsg.linear.x = msg.axes[0];
+    twistMsg.linear.y = msg.axes[1];
+    twistMsg.linear.z = msg.axes[2];
+  }
+
+  void rotateCb(const sensor_msgs::Joy &msg)
+  {
+    if(sizeof(msg.axes)/sizeof(float) < 3) {
+      ROS_INFO("JOYSTICK ERROR: Not enough axes");
+      return;
+    }
+    twistMsg.angular.x = msg.axes[0];
+    twistMsg.angular.y = msg.axes[1];
+    twistMsg.angular.z = msg.axes[2];
+  }
