@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<sdf version="1.5">
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <!--include>
+      <uri>model://ucf_submarine_simple</uri>
+      <name>ucf_submarine_simple</name>
+      <pose>0 0 1 0 0 0</pose-->
+    </include>
+  </world>
+</sdf>
