@@ -1,7 +1,11 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Quaternion.h>
 #include <gazebo_msgs/ApplyBodyWrench.h>
 #include <gazebo_msgs/BodyRequest.h>
+#include <gazebo_msgs/ModelStates.h>
+#include <tf/tf.h>
 
 #include <algorithm>
 //More thrust reverse
@@ -28,9 +32,13 @@ public:
 
     ros::NodeHandle nh_;
     ros::Subscriber commandSub;
+    ros::Subscriber modelUpdate;
     ros::ServiceClient gazeboWrenchCaller;
     ros::ServiceClient gazeboStopCaller;
 
+    geometry_msgs::Twist joystickInput;
+
     void commandCb(const geometry_msgs::Twist &msg);
 
+    void stateCb(const gazebo_msgs::ModelStates &msg);
 };
