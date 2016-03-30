@@ -36,7 +36,8 @@ public:
     ros::ServiceClient gazeboWrenchCaller;
     ros::ServiceClient gazeboStopCaller;
 
-    geometry_msgs::Twist joystickInput;
+    tf::Vector3 linear;
+    tf::Vector3 angular;
 
     void commandCb(const geometry_msgs::Twist &msg);
 

@@ -19,13 +19,8 @@ GazeboInterface::GazeboInterface()
     gazeboWrenchCaller = nh_.serviceClient<gazebo_msgs::ApplyBodyWrench>("/gazebo/apply_body_wrench");
     gazeboStopCaller = nh_.serviceClient<gazebo_msgs::BodyRequest>("/gazebo/clear_body_wrenches");
 
-    joystickInput.angular.x = 0.0;
-    joystickInput.angular.y = 0.0;
-    joystickInput.angular.z = 0.0;
-
-    joystickInput.linear.x = 0.0;
-    joystickInput.linear.y = 0.0;
-    joystickInput.linear.z = 0.0;
+    linear = tf::Vector3(0.0,0.0,0.0);
+    angular = tf::Vector3(0.0,0.0,0.0);
 }
 
 GazeboInterface::~GazeboInterface()
@@ -44,14 +39,16 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
 
     geometry_msgs::Quaternion orientation = msg.pose[subIndex].orientation;
     tf::Quaternion rotWtL(orientation.x, orientation.y, orientation.z, orientation.w);
-    //tf::Quaternion rotLtW = rotWtL.inverse();
+    tf::Quaternion rotLtW = rotWtL.inverse();
 
-    tf::Vector3 gravityLocal = tf::quatRotate(rotWtL, tf::Vector3(0,0,-500));
-    tf::Vector3 bouyancyLocal = tf::quatRotate(rotWtL, tf::Vector3(0,0,500));
-    tf::Vector3 gravityOffset = tf::Vector3(0,0,-0.2);
+    tf::Vector3 gravityLocal = tf::quatRotate(rotWtL, tf::Vector3(0,0,-311)); //Transform world space forces to local
+    tf::Vector3 bouyancyLocal = tf::quatRotate(rotWtL, tf::Vector3(0,0,311));
+    tf::Vector3 gravityOffset = tf::Vector3(0,0,-0.2); //Local space offsets
     tf::Vector3 bouyancyOffset = tf::Vector3(0,0,0.2);
 
-    tf::Vector3 stabilityTorque = gravityOffset.cross(gravityLocal) + bouyancyOffset.cross(bouyancyLocal);
+    tf::Vector3 rotationVelocity(msg.twist[subIndex].angular.x,msg.twist[subIndex].angular.y,msg.twist[subIndex].angular.z);
+
+    tf::Vector3 stabilityTorque = gravityOffset.cross(gravityLocal) + bouyancyOffset.cross(bouyancyLocal) - rotationVelocity * 50;
     tf::Vector3 floatiness = gravityLocal+bouyancyLocal;
 
 
@@ -60,44 +57,73 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
 
     gazebo_msgs::ApplyBodyWrench wrench;
     wrench.request.body_name = "ucf_submarine_simple::body";
-    wrench.request.reference_frame = "ucf_submarine_simple::body";
+    //wrench.request.reference_frame = "ucf_submarine_simple::body";
+    wrench.request.reference_frame = "world";
 
     //You can't deliver maximum thrust and maximum torque on the same axis, so mix things to represent this
     //+x forward, +z down, +y right
     float tFrontUp, tRearUp, tLeftForward, tRightForward, tTopStrafe, tBottomStrafe;
 
-    tFrontUp = std::max(-1.0, std::min(1.0, joystickInput.linear.z + joystickInput.angular.y));
-    tRearUp = std::max(-1.0, std::min(1.0, joystickInput.linear.z - joystickInput.angular.y));
+    tFrontUp = std::max(-1.0, std::min(1.0, linear.getZ() + angular.getY()));
+    tRearUp = std::max(-1.0, std::min(1.0, linear.getZ() - angular.getY()));
 
-    tLeftForward = std::max(-1.0, std::min(1.0, joystickInput.linear.x - joystickInput.angular.z));
-    tRightForward = std::max(-1.0, std::min(1.0, joystickInput.linear.x + joystickInput.angular.z));
+    tLeftForward = std::max(-1.0, std::min(1.0, linear.getX() - angular.getZ()));
+    tRightForward = std::max(-1.0, std::min(1.0, linear.getX() + angular.getZ()));
 
-    tTopStrafe = std::max(-1.0, std::min(1.0, joystickInput.linear.y - joystickInput.angular.x));
-    tBottomStrafe = std::max(-1.0, std::min(1.0, joystickInput.linear.y + joystickInput.angular.x));
+    tTopStrafe = std::max(-1.0, std::min(1.0, linear.getY() - angular.getX()));
+    tBottomStrafe = std::max(-1.0, std::min(1.0, linear.getY() + angular.getX()));
 
-    wrench.request.wrench.force.x = (tLeftForward + tRightForward) * MAX_THRUST + floatiness.x();
-    wrench.request.wrench.force.y = (tTopStrafe + tBottomStrafe) * MAX_THRUST + floatiness.y();
-    wrench.request.wrench.force.z = (tFrontUp + tRearUp) * MAX_THRUST + floatiness.z();
+//    wrench.request.wrench.force.x = (tLeftForward + tRightForward) * MAX_THRUST + floatiness.x();
+//    wrench.request.wrench.force.y = (tTopStrafe + tBottomStrafe) * MAX_THRUST + floatiness.y();
+//    wrench.request.wrench.force.z = (tFrontUp + tRearUp) * MAX_THRUST + floatiness.z();
 
-    wrench.request.wrench.torque.x = (tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x();
-    wrench.request.wrench.torque.y = (tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y();
-    wrench.request.wrench.torque.z = (tRightForward - tBottomStrafe) * MAX_TORQUE_YAW + stabilityTorque.z();
+//    wrench.request.wrench.torque.x = (tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x();
+//    wrench.request.wrench.torque.y = (tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y();
+//    wrench.request.wrench.torque.z = (tRightForward - tBottomStrafe) * MAX_TORQUE_YAW + stabilityTorque.z();
+    tf::Vector3 force;
+    tf::Vector3 torque;
 
-    wrench.request.duration.sec = 0.01;
+    force.setX((tLeftForward + tRightForward) * MAX_THRUST + floatiness.x());
+    force.setY((tTopStrafe + tBottomStrafe) * MAX_THRUST + floatiness.y());
+    force.setZ((tFrontUp + tRearUp) * MAX_THRUST + floatiness.z());
+
+    tf::Vector3 forceWorld = tf::quatRotate(rotLtW, force);
+
+    torque.setX((tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x());
+    torque.setY((tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y());
+    torque.setZ((tRightForward - tBottomStrafe) * MAX_TORQUE_YAW + stabilityTorque.z());
+
+    tf::Vector3 torqueWorld = tf::quatRotate(rotLtW, torque);
+
+    wrench.request.wrench.force.x = forceWorld.getX();
+    wrench.request.wrench.force.y = forceWorld.getY();
+    wrench.request.wrench.force.z = forceWorld.getZ();
+
+    wrench.request.wrench.torque.x = torqueWorld.getX();
+    wrench.request.wrench.torque.y = torqueWorld.getY();
+    wrench.request.wrench.torque.z = torqueWorld.getZ();
+
+    wrench.request.duration.sec = 0.00001;
     wrench.request.start_time.sec = 0;
 
     gazeboStopCaller.call(stop);
     gazeboWrenchCaller.call(wrench);
-
-    std::ostringstream oss;
-    double x = wrench.request.wrench.torque.x;
-    double y = wrench.request.wrench.torque.y;
-    double z = wrench.request.wrench.torque.z;
-    //oss << "Stability Torque: (" << x << ", " << y << ", " << z << ")";
-    //ROS_INFO(oss.str().c_str());
 }
 
 void GazeboInterface::commandCb(const geometry_msgs::Twist &msg)
 {
-    joystickInput = msg;
+    //std::ostringstream oss;
+    //double x = msg.linear.x;
+    //double y = msg.linear.y;
+    //double z = msg.linear.z;
+    //oss << "Translation input: (" << x << ", " << y << ", " << z << ")\n";
+    //printf(oss.str().c_str());
+
+    angular.setX(msg.angular.x);
+    angular.setY(msg.angular.y);
+    angular.setZ(msg.angular.z);
+
+    linear.setX(msg.linear.x);
+    linear.setY(msg.linear.y);
+    linear.setZ(msg.linear.z);
 }
