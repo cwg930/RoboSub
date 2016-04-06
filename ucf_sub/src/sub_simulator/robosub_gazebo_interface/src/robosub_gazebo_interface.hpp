@@ -17,7 +17,7 @@
 //Front thruster to back thruster 0.216
 
 //Maximum bidirectional thrust/torque a single thruster can provide
-#define MAX_THRUST 29.42
+#define MAX_THRUST 2942
 
 #define MAX_TORQUE_ROLL MAX_THRUST * 0.1633
 #define MAX_TORQUE_YAW MAX_THRUST * 0.1632

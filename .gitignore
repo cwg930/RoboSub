@@ -14,3 +14,6 @@ CMakeLists.txt.user
 
 # Jetbrains IDE files
 .idea/s
+
+# Temporary files
+*~

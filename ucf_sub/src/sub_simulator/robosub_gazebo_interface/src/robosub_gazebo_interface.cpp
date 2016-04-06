@@ -49,7 +49,7 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     tf::Vector3 rotationVelocity(msg.twist[subIndex].angular.x,msg.twist[subIndex].angular.y,msg.twist[subIndex].angular.z);
 
     tf::Vector3 stabilityTorque = gravityOffset.cross(gravityLocal) + bouyancyOffset.cross(bouyancyLocal) - rotationVelocity * 50;
-    tf::Vector3 floatiness = gravityLocal+bouyancyLocal;
+    tf::Vector3 floatiness = gravityLocal + bouyancyLocal;
 
 
     gazebo_msgs::BodyRequest stop;
@@ -58,14 +58,14 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     gazebo_msgs::ApplyBodyWrench wrench;
     wrench.request.body_name = "ucf_submarine_simple::body";
     //wrench.request.reference_frame = "ucf_submarine_simple::body";
-    wrench.request.reference_frame = "world";
+    //wrench.request.reference_frame = "";
 
     //You can't deliver maximum thrust and maximum torque on the same axis, so mix things to represent this
     //+x forward, +z down, +y right
     float tFrontUp, tRearUp, tLeftForward, tRightForward, tTopStrafe, tBottomStrafe;
 
     tFrontUp = std::max(-1.0, std::min(1.0, linear.getZ() + angular.getY()));
-    tRearUp = std::max(-1.0, std::min(1.0, linear.getZ() - angular.getY()));
+    tRearUp = std::max(-1.0, std::min(1.0, linear.getZ()  - angular.getY()));
 
     tLeftForward = std::max(-1.0, std::min(1.0, linear.getX() - angular.getZ()));
     tRightForward = std::max(-1.0, std::min(1.0, linear.getX() + angular.getZ()));
@@ -91,7 +91,7 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
 
     torque.setX((tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x());
     torque.setY((tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y());
-    torque.setZ((tRightForward - tBottomStrafe) * MAX_TORQUE_YAW + stabilityTorque.z());
+    torque.setZ((tRightForward - tLeftForward) * MAX_TORQUE_YAW + stabilityTorque.z());
 
     tf::Vector3 torqueWorld = tf::quatRotate(rotLtW, torque);
 
@@ -102,11 +102,19 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     wrench.request.wrench.torque.x = torqueWorld.getX();
     wrench.request.wrench.torque.y = torqueWorld.getY();
     wrench.request.wrench.torque.z = torqueWorld.getZ();
+/*
+    std::ostringstream oss;
+    double x = torque.getX();
+    double y = torque.getY();
+    double z = torque.getZ();
+    oss << "Translation input: (" << x << ", " << y << ", " << z << ")\n";
+    printf(oss.str().c_str());
+*/
 
     wrench.request.duration.sec = 0.00001;
     wrench.request.start_time.sec = 0;
 
-    gazeboStopCaller.call(stop);
+    //gazeboStopCaller.call(stop);
     gazeboWrenchCaller.call(wrench);
 }
 
