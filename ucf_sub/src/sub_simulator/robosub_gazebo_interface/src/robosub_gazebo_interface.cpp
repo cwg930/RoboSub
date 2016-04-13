@@ -57,7 +57,7 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
 
     gazebo_msgs::ApplyBodyWrench wrench;
     wrench.request.body_name = "ucf_submarine_simple::body";
-    //wrench.request.reference_frame = "ucf_submarine_simple::body";
+    wrench.request.reference_frame = "world";
     //wrench.request.reference_frame = "";
 
     //You can't deliver maximum thrust and maximum torque on the same axis, so mix things to represent this
@@ -87,13 +87,13 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     force.setY((tTopStrafe + tBottomStrafe) * MAX_THRUST + floatiness.y());
     force.setZ((tFrontUp + tRearUp) * MAX_THRUST + floatiness.z());
 
-    tf::Vector3 forceWorld = tf::quatRotate(rotLtW, force);
+    tf::Vector3 forceWorld = tf::quatRotate(rotWtL, force);
 
     torque.setX((tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x());
     torque.setY((tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y());
     torque.setZ((tRightForward - tLeftForward) * MAX_TORQUE_YAW + stabilityTorque.z());
 
-    tf::Vector3 torqueWorld = tf::quatRotate(rotLtW, torque);
+    tf::Vector3 torqueWorld = tf::quatRotate(rotWtL, torque);
 
     wrench.request.wrench.force.x = forceWorld.getX();
     wrench.request.wrench.force.y = forceWorld.getY();
