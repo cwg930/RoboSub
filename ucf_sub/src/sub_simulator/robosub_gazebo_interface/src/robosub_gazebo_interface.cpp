@@ -17,7 +17,6 @@ GazeboInterface::GazeboInterface()
     commandSub = nh_.subscribe("/sub/dualStickControl", 1000, &GazeboInterface::commandCb, this);
     modelUpdate = nh_.subscribe("/gazebo/model_states", 1000, &GazeboInterface::stateCb, this);
     gazeboWrenchCaller = nh_.serviceClient<gazebo_msgs::ApplyBodyWrench>("/gazebo/apply_body_wrench");
-    gazeboStopCaller = nh_.serviceClient<gazebo_msgs::BodyRequest>("/gazebo/clear_body_wrenches");
 
     linear = tf::Vector3(0.0,0.0,0.0);
     angular = tf::Vector3(0.0,0.0,0.0);
@@ -48,17 +47,12 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
 
     tf::Vector3 rotationVelocity(msg.twist[subIndex].angular.x,msg.twist[subIndex].angular.y,msg.twist[subIndex].angular.z);
 
-    tf::Vector3 stabilityTorque = gravityOffset.cross(gravityLocal) + bouyancyOffset.cross(bouyancyLocal) - rotationVelocity * 50;
+    tf::Vector3 stabilityTorque = gravityOffset.cross(gravityLocal) + bouyancyOffset.cross(bouyancyLocal) - tf::quatRotate(rotWtL,rotationVelocity) * 50;
     tf::Vector3 floatiness = gravityLocal + bouyancyLocal;
-
-
-    gazebo_msgs::BodyRequest stop;
-    stop.request.body_name = "ucf_submarine_simple";
 
     gazebo_msgs::ApplyBodyWrench wrench;
     wrench.request.body_name = "ucf_submarine_simple::body";
     wrench.request.reference_frame = "world";
-    //wrench.request.reference_frame = "";
 
     //You can't deliver maximum thrust and maximum torque on the same axis, so mix things to represent this
     //+x forward, +z down, +y right
@@ -73,13 +67,6 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     tTopStrafe = std::max(-1.0, std::min(1.0, linear.getY() - angular.getX()));
     tBottomStrafe = std::max(-1.0, std::min(1.0, linear.getY() + angular.getX()));
 
-//    wrench.request.wrench.force.x = (tLeftForward + tRightForward) * MAX_THRUST + floatiness.x();
-//    wrench.request.wrench.force.y = (tTopStrafe + tBottomStrafe) * MAX_THRUST + floatiness.y();
-//    wrench.request.wrench.force.z = (tFrontUp + tRearUp) * MAX_THRUST + floatiness.z();
-
-//    wrench.request.wrench.torque.x = (tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x();
-//    wrench.request.wrench.torque.y = (tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y();
-//    wrench.request.wrench.torque.z = (tRightForward - tBottomStrafe) * MAX_TORQUE_YAW + stabilityTorque.z();
     tf::Vector3 force;
     tf::Vector3 torque;
 
@@ -87,13 +74,13 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     force.setY((tTopStrafe + tBottomStrafe) * MAX_THRUST + floatiness.y());
     force.setZ((tFrontUp + tRearUp) * MAX_THRUST + floatiness.z());
 
-    tf::Vector3 forceWorld = tf::quatRotate(rotWtL, force);
+    tf::Vector3 forceWorld = tf::quatRotate(rotLtW, force);
 
     torque.setX((tBottomStrafe - tTopStrafe) * MAX_TORQUE_ROLL + stabilityTorque.x());
     torque.setY((tFrontUp - tRearUp) * MAX_TORQUE_PITCH + stabilityTorque.y());
     torque.setZ((tRightForward - tLeftForward) * MAX_TORQUE_YAW + stabilityTorque.z());
 
-    tf::Vector3 torqueWorld = tf::quatRotate(rotWtL, torque);
+    tf::Vector3 torqueWorld = tf::quatRotate(rotLtW, torque);
 
     wrench.request.wrench.force.x = forceWorld.getX();
     wrench.request.wrench.force.y = forceWorld.getY();
@@ -102,19 +89,18 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     wrench.request.wrench.torque.x = torqueWorld.getX();
     wrench.request.wrench.torque.y = torqueWorld.getY();
     wrench.request.wrench.torque.z = torqueWorld.getZ();
-/*
+
     std::ostringstream oss;
-    double x = torque.getX();
-    double y = torque.getY();
-    double z = torque.getZ();
+    double x = torqueWorld.getX();
+    double y = torqueWorld.getY();
+    double z = torqueWorld.getZ();
     oss << "Translation input: (" << x << ", " << y << ", " << z << ")\n";
     printf(oss.str().c_str());
-*/
+
 
     wrench.request.duration.sec = 0.00001;
     wrench.request.start_time.sec = 0;
 
-    //gazeboStopCaller.call(stop);
     gazeboWrenchCaller.call(wrench);
 }
 
