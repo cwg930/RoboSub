@@ -91,10 +91,6 @@ void GazeboInterface::stateCb(const gazebo_msgs::ModelStates &msg)
     wrench.request.wrench.torque.z = torqueWorld.getZ();
 
     std::ostringstream oss;
-    double x = torqueWorld.getX();
-    double y = torqueWorld.getY();
-    double z = torqueWorld.getZ();
-    oss << "Translation input: (" << x << ", " << y << ", " << z << ")\n";
     printf(oss.str().c_str());
 
 
