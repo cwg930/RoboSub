@@ -17,3 +17,6 @@ CMakeLists.txt.user
 
 # Emacs/other editor temp files
 *~
+
+# Empty file marking catkin workspace location
+.catkin_workspace

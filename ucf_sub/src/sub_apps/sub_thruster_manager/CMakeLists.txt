@@ -3,6 +3,7 @@ project(sub_thruster_manager)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  std_msgs
   blue_robotics_t200
 )
 
