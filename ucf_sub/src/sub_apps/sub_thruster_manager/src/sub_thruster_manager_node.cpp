@@ -91,5 +91,9 @@ public:
 
 int main(int argc, char** argv)
 {
+    ros::init(argc, argv, "thrust_manager");
+    ThrusterManager tc;
+    tc.init();
+
     return 0;
 }
