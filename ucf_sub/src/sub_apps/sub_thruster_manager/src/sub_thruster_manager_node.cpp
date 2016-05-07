@@ -78,6 +78,9 @@ public:
         tTopStrafe = std::max(-1.0f, std::min(1.0f, linearY - angularX));
         tBottomStrafe = std::max(-1.0f, std::min(1.0f, linearY + angularX));
 
+        //command the thrusters to the desired velocity
+        thrusters[0].setVelocityRatio(abs(tLeftForward), tLeftForward > 0.0f ? T200ThrusterDirection.Forward : T200ThrusterDirection.Reverse);
+        thrusters[1].setVelocityRatio(abs(tRightForward), tRightForward > 0.0f ? T200ThrusterDirection.Forward : T200ThrusterDirection.Reverse);
 
     }
     float magnitude(float x, float y) //return the magnitude of a 2d vector
