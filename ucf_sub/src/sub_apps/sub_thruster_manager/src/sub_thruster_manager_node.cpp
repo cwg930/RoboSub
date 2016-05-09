@@ -83,7 +83,7 @@ public:
         thrusterr.setVelocityRatio(fabs(tLeftForward), tLeftForward >0.0f ? T200ThrusterDirections::Forward : T200ThrusterDirections::Reverse);
         thrusterl.setVelocityRatio(fabs(tRightForward), tRightForward > 0.0f ? T200ThrusterDirections::Forward : T200ThrusterDirections::Reverse);
         
-       ROS_INFO("out: %f\n", tLeftForward);
+        ROS_INFO("out: %f\n", tLeftForward);
     }
     float magnitude(float x, float y) //return the magnitude of a 2d vector
     {
