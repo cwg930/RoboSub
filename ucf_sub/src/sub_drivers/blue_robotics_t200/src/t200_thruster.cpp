@@ -35,7 +35,6 @@ void T200Thruster::setVelocityRatio(double velocity_ratio, T200ThrusterDirection
     // Compute true requested velocity value between -MAX_VELOCITY_VALUE and MAX_VELOCITY_VALUE
     short velocity_value = (short)(velocity_ratio * MAX_VELOCITY_VALUE);
     // Send command value to thruster
-    printf("%d\n", velocity_value);
     setVelocity(velocity_value);
 }
 
