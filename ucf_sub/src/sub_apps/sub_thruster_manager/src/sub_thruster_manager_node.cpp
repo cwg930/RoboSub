@@ -7,16 +7,17 @@ class ThrusterManager {
     ros::NodeHandle nh_;
     ros::Subscriber command_subscriber;
 
-    std::vector<T200Thruster*> thrusters;
+    T200Thruster thrusterr;
+    T200Thruster thrusterl;
 
 public:
-    ThrusterManager()
+    ThrusterManager() : thrusterl(2, 0x2D), thrusterr(2, 0x2E)
     {
         command_subscriber = nh_.subscribe("/thrustercommands", 1000, &ThrusterManager::thrusterCb, this);
 
-        thrusters.reserve(6);
-        thrusters[0] = new T200Thruster(2, 0x2D);
-        thrusters[1] = new T200Thruster(2, 0x2E);
+        //thrusters.reserve(6);
+        //thrusters = T200Thruster(2, 0x2D);
+        //thrusters[1] = T200Thruster(2, 0x2E);
     }
 
     void init()
@@ -79,8 +80,10 @@ public:
         tBottomStrafe = std::max(-1.0f, std::min(1.0f, linearY + angularX));
 
         //command the thrusters to the desired velocity
-        thrusters[0]->setVelocityRatio(fabs(tLeftForward), tLeftForward > 0.0f ? T200ThrusterDirections::Forward : T200ThrusterDirections::Reverse);
-        thrusters[1]->setVelocityRatio(fabs(tRightForward), tRightForward > 0.0f ? T200ThrusterDirections::Forward : T200ThrusterDirections::Reverse);
+        thrusterr.setVelocityRatio(fabs(tLeftForward), tLeftForward >0.0f ? T200ThrusterDirections::Forward : T200ThrusterDirections::Reverse);
+        thrusterl.setVelocityRatio(fabs(tRightForward), tRightForward > 0.0f ? T200ThrusterDirections::Forward : T200ThrusterDirections::Reverse);
+        
+        ROS_INFO("out: %f\n", tLeftForward);
     }
     float magnitude(float x, float y) //return the magnitude of a 2d vector
     {
