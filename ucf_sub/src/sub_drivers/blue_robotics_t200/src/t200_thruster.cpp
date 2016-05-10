@@ -1,5 +1,6 @@
 #include <blue_robotics_t200/t200_thruster.h>
 #include <cmath>
+#include <cstdio>
 
 T200Thruster::T200Thruster(int bus_number, unsigned char address) :
     i2c_interface_(bus_number, address)
@@ -32,7 +33,7 @@ void T200Thruster::setVelocityRatio(double velocity_ratio, T200ThrusterDirection
         velocity_ratio *= -1.0;
 
     // Compute true requested velocity value between -MAX_VELOCITY_VALUE and MAX_VELOCITY_VALUE
-    int velocity_value = (int)(velocity_ratio * MAX_VELOCITY_VALUE);
+    short velocity_value = (short)(velocity_ratio * MAX_VELOCITY_VALUE);
     // Send command value to thruster
     setVelocity(velocity_value);
 }
