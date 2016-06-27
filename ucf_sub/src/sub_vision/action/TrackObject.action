@@ -1,0 +1,18 @@
+#goal
+int32 objectType
+int32 redBouy=0
+int32 yellowBouy=1
+int32 greenBouy=2
+int32 startGate=3
+int32 trench=4
+---
+#result
+bool stoppedOk
+---
+#feedback
+int32 fixType
+int32 direction=0
+int32 position=1
+int32 pose=2
+
+geometry_msgs/Pose targetPose
