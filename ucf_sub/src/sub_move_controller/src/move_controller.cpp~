@@ -1,0 +1,37 @@
+#include <sub_move_controller/MoveCommandAction.h>
+#include <actionlib/server/simple_action_server.h>
+
+class MoveCommandAction
+{
+protected:
+  ros::NodeHandle nh_;
+  actionlib::SimpleActionServer<sub_move_controller::MoveCommandAction> as_;
+  std::string action_name_;
+  sub_move_controller::MoveCommandFeedback feedback_;
+  sub_move_controller::MoveCommandResult result_;
+
+public:
+
+  MoveCommandAction(std::string name):
+    as_(nh_, name, boost::bind(&MoveCommandAction::executeCb, this, _1), false),
+    action_name_(name)
+  {
+    as_.start();
+  }
+
+  ~MoveCommandAction()
+  {
+  }
+
+  void executeCb(const sub_move_controller::MoveCommandGoalConstPtr& goal)
+  {
+    as_.setSucceeded(result_);
+  }
+};
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "sub_move_server");
+    MoveCommandAction moveServer(ros::this_node::getName());
+    ros::spin();
+    return 0;
+}
