@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+    <xacro:macro name="sub_body">
+        <link name="base_link">
+            <visual>
+                <geometry>
+                    <cylinder length="0.8068" radius="0.102"/>
+                </geometry>
+                <origin rpy="0 1.571 0"/>
+                <material name="white">
+                    <color rgba="1 1 1 0.7"/>
+                </material>
+            </visual>
+            <visual>
+                <geometry>
+                    <sphere radius="0.102"/>
+                </geometry>
+                <origin xyz="0.4034 0 0"/>
+                <material name="white"/>
+            </visual>
+            <visual>
+                <geometry>
+                    <sphere radius="0.102"/>
+                </geometry>
+                <origin xyz="-0.4034 0 0"/>
+                <material name="white"/>
+            </visual>
+            <collision>
+                <geometry>
+                    <cylinder length="0.8068" radius="0.102"/>
+                </geometry>
+                <origin rpy="0 1.571 0"/>
+            </collision>
+            <collision>
+                <geometry>
+                    <sphere radius="0.102"/>
+                </geometry>
+                <origin xyz="0.4034 0 0"/>
+            </collision>
+            <collision>
+                <geometry>
+                    <sphere radius="0.102"/>
+                </geometry>
+                <origin xyz="-0.4034 0 0"/>
+            </collision>
+        </link>
+    </xacro:macro>
+</robot>
