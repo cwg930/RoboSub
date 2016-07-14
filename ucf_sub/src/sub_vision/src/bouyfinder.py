@@ -7,15 +7,17 @@ import vision_utils
 from sub_vision.msg import TrackObjectFeedback
 
 class BuoyFinder:
-    def __init__(self, cameraModelLeft, cameraModelStereo, thresholds=Thresholds(upper=(40,52,120), lower=(20, 30, 80))):
+    def __init__(self):
+        pass
+        
+    def process(self, imageLeftRect, imageRightRect, imageDisparityRect, cameraModelLeft, cameraModelStereo, thresholds=Thresholds(upper=(40,52,120), lower=(20, 30, 80))):
+        
         self.cameraModel = cameraModelLeft
         self.cameraModelStereo = cameraModelStereo
         self.thresholds = thresholds
         
-    def process(self, imageLeftRect, imageRightRect, imageDisparityRect):
-    
         imageHSV = cv2.cvtColor(imageLeftRect, cv2.COLOR_BGR2HSV)
-        contours, _ = ThreshAndContour(image, thresholds)
+        contours, _ = ThreshAndContour(imageHSV, thresholds)
         if len(contours) > 0:
             circles = filter(lambda x : contourCircularity(x)>0.7, contours)
         else:
@@ -44,7 +46,7 @@ class BuoyFinder:
         if closest > 0: #Get position based off stereo disparity (assumed(?) more accurate)
             estLocation = self.cameraModelStereo.projectPixelTo3d((x,y),closest)
         else:           #Get position based off of object size and focal length
-            c = 1 #actual bouy size in units
+            c = 0.2 #actual bouy size in meters
             dist = ((c*self.cameraModel.fx())/w + (c*self.cameraModel.fy())/h)/2
             projectedRay = self.cameraModel.projectPixelTo3dRay((x,y))
             estLocation = tuple(dist*x for x in projectedRay) #http://stackoverflow.com/a/1781987
@@ -57,7 +59,7 @@ class BuoyFinder:
         
         feedback.targetPose.Quaternion.w = 1
         feedback.targetPose.Quaternion.x = 0
-        feedback.targetPose.Quaternion.x = 0
-        feedback.targetPose.Quaternion.x = 0
+        feedback.targetPose.Quaternion.y = 0
+        feedback.targetPose.Quaternion.z = 0
         
         return feedback
