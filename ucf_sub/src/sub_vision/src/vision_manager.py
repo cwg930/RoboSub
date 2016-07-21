@@ -3,10 +3,12 @@ import rospy
 import actionlib
 import cv2
 import image_geometry
+import json
 
 from sub_vision.msg import TrackObjectAction, TrackObjectGoal, TrackObjectFeedback, TrackObjectResult
 
 from sensor_msgs.msg import Image
+from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 
 import gatefinder, navbarfinder, bouyfinder 
@@ -19,19 +21,40 @@ class VisionServer:
         self.bridge = CvBridge()
         
         self.downSub = rospy.Subscriber('/down_camera/image_raw', Image, self.downwardsCallback)
+        self.downInfoSub = rospy.Subscriber('/down_camera/info', CameraInfo, self.downInfoCallback)
         self.downImage = None
         self.downModel = None
+        self.stereoSub = rospy.Subscriber('/stereo/disparity', Image, self.stereoCallback)
+        self.stereoInfoSub = rospy.Subscriber('/stereo/info', CameraInfo, self.stereoInfoCallback)
+        self.disparityImage = None
+        self.stereoModel = None
         
+        self.leftSub = rospy.Subscriber('/left_camera/image_raw', Image, self.leftCallback)
+        self.leftInfoSub = rospy.Subscriber('/left_camera/info', CameraInfo, self.leftInfoCallback)
+        self.leftImage = None
+        self.leftModel = None
+        self.leftMsg = None
+        self.rightInfoSub = rospy.Subscriber('/right_camera/info', CameraInfo, self.rightInfoCallback)
+        self.rightMsg = None
         self.targetType = TrackObjectGoal.navbar
-        
+#        self.thresholds = self.loadThresholds()
+
+        self.navBarFinder = navbarfinder.NavbarFinder()
+        self.bouyFinder = bouyfinder.BuoyFinder()
+        self.feedback = TrackObjectFeedback()
         self.response = TrackObjectResult()
         
+
     def execute(self, goal):
         self.targetType = goal.objectType
         
         self.running = True
         self.ok = True
         
+        if self.leftMsg is not None and self.rightMsg is not None:
+            self.stereoModel = image_geometry.StereoCameraModel()
+            self.stereoModel.fromCameraInfo(self.leftMsg, self.rightMsg)
+
         feedback = TrackObjectFeedback()
         while running:
             if self.server.is_preempt_requested() or self.server.is_new_goal_available():
@@ -41,13 +64,21 @@ class VisionServer:
             
             if self.targetType == TrackObjectGoal.navbar:
                 #Process navbar stuff
-                self.server.publish_feedback()
+                self.feedback = self.navBarFinder.process(self.downImage, self.downModel)
+                self.server.publish_feedback(self.feedback)
+#TODO: Fix color thresholds
             elif self.targetType == TrackObjectGoal.redBouy:
                 #process red bouy
+                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, Thresholds(upper=(40,52,120), lower=(20,30,80)))
+                self.server.publish_feedback(self.feedback)
             elif self.targetType == TrackObjectGoal.yellowBouy:
                 #process yellow bouy
+                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, Thresholds(upper=(40,52,120), lower=(20,30,80)))
+                self.server.publish_feedback(self.feedback) 
             elif self.targetType == TrackObjectGoal.greenBouy:
                 #process green bouy
+                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, Thresholds(upper=(40,52,120), lower=(20,30,80)))
+                self.server.publish_feedback(self.feedback)
         self.response.stoppedOk = self.ok
         self.server.set_succeeded(self.response)
     
@@ -63,8 +94,47 @@ class VisionServer:
         
         self.downModel.rectifyImage(self.downImage, self.downImage)
         
-        
+    def stereoCallback(self, msg):
+        try:
+            self.disparityImage = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+
+        if self.stereoModel is None:
+            print("No camera model for stereo camera")
+            return
+
+        self.stereoModel.rectifyImage(self.disparityImage, self.disparityImage)
     
+    def leftCallback(self, msg):
+        try:
+            self.leftImage = self.bridge.imgmsg_to_cv2(data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+
+        if self.leftModel is None:
+            print("No camera model for left camera")
+            return
+
+        self.leftModel.rectifyImage(self.leftImage, self.leftImage)
+    
+    def downInfoCallback(self, msg):
+        self.downModel = image_geometry.PinholeCameraModel()
+        self.downModel.fromCameraInfo(msg)
+
+    def rightInfoCallback(self, msg):
+        self.rightMsg = msg
+        
+    def leftInfoCallback(self, msg):
+        self.leftMsg = msg
+        self.leftModel = image_geometry.PinholeCameraModel()
+        self.leftModel.fromCameraInfo(msg)
+        
+  #  def loadThresholds(self):
+  #      with open('../thresholds.json') as data_file:
+  #          data = json.loads(data_file.read())
+  #      return data
+
 if __name__ == '__main__':
     rospy.init_node('vision_server')
     server = VisionServer()
