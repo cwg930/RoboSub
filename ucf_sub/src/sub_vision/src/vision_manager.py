@@ -9,6 +9,8 @@ from sub_vision.msg import TrackObjectAction, TrackObjectGoal, TrackObjectFeedba
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge, CvBridgeError
 
+import gatefinder, navbarfinder, bouyfinder 
+
 class VisionServer:
     def __init__(self):
         self.server = actionlib.SimpleActionServer('track_object', TrackObjectAction, self.execute, False)
