@@ -1,0 +1,29 @@
+#goal
+int32 objectType
+
+#Constants for object types
+int32 navbar=0
+int32 redBouy=1
+int32 yellowBouy=2
+int32 greenBouy=3
+int32 startGate=4
+int32 trench=5
+---
+#result
+bool stoppedOk
+---
+#feedback
+Header header
+int32 fixType
+
+#constants for fix types
+int32 direction=0
+int32 position=1
+int32 pose=2
+
+#Pose used to pass back fix information
+#If fix type is direction, the point component is a direction vector
+#If fix type is position, point component is the position in camera space (add header for frame id?)
+#if fix type is pose, point and quaternion are pose in camera space
+#quaternion is only valid for pose fix type
+geometry_msgs/Pose targetPose

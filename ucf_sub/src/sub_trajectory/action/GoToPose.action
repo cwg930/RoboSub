@@ -1,0 +1,9 @@
+#goal
+geometry_msgs/Pose startPose
+geometry_msgs/Pose targetPose
+---
+#result
+bool Ok
+---
+#feedback
+float32 distance
