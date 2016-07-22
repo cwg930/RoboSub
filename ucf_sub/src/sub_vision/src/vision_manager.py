@@ -4,6 +4,7 @@ import actionlib
 import cv2
 import image_geometry
 import json
+import os.path
 
 from sub_vision.msg import TrackObjectAction, TrackObjectGoal, TrackObjectFeedback, TrackObjectResult
 
@@ -11,7 +12,7 @@ from sensor_msgs.msg import Image
 from sensor_msgs.msg import CameraInfo
 from cv_bridge import CvBridge, CvBridgeError
 
-import gatefinder, navbarfinder, bouyfinder 
+import gatefinder, navbarfinder, bouyfinder, vision_utils
 
 class VisionServer:
     def __init__(self):
@@ -25,7 +26,7 @@ class VisionServer:
         self.downImage = None
         self.downModel = None
         self.stereoSub = rospy.Subscriber('/stereo/disparity', Image, self.stereoCallback)
-        self.stereoInfoSub = rospy.Subscriber('/stereo/info', CameraInfo, self.stereoInfoCallback)
+#        self.stereoInfoSub = rospy.Subscriber('/stereo/info', CameraInfo, self.stereoInfoCallback)
         self.disparityImage = None
         self.stereoModel = None
         
@@ -37,8 +38,8 @@ class VisionServer:
         self.rightInfoSub = rospy.Subscriber('/right_camera/info', CameraInfo, self.rightInfoCallback)
         self.rightMsg = None
         self.targetType = TrackObjectGoal.navbar
-#        self.thresholds = self.loadThresholds()
-
+        self.thresholds = self.loadThresholds()
+        
         self.navBarFinder = navbarfinder.NavbarFinder()
         self.bouyFinder = bouyfinder.BuoyFinder()
         self.feedback = TrackObjectFeedback()
@@ -69,15 +70,15 @@ class VisionServer:
 #TODO: Fix color thresholds
             elif self.targetType == TrackObjectGoal.redBouy:
                 #process red bouy
-                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, Thresholds(upper=(40,52,120), lower=(20,30,80)))
+                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, self.thresholds['red'])
                 self.server.publish_feedback(self.feedback)
             elif self.targetType == TrackObjectGoal.yellowBouy:
                 #process yellow bouy
-                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, Thresholds(upper=(40,52,120), lower=(20,30,80)))
+                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, self.thresholds['yellow'])
                 self.server.publish_feedback(self.feedback) 
             elif self.targetType == TrackObjectGoal.greenBouy:
                 #process green bouy
-                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, Thresholds(upper=(40,52,120), lower=(20,30,80)))
+                self.feedback = self.bouyFinder.process(self.leftImage, self.disparityImage, self.leftModel, self.stereoModel, self.thresholds['green'])
                 self.server.publish_feedback(self.feedback)
         self.response.stoppedOk = self.ok
         self.server.set_succeeded(self.response)
@@ -130,10 +131,15 @@ class VisionServer:
         self.leftModel = image_geometry.PinholeCameraModel()
         self.leftModel.fromCameraInfo(msg)
         
-  #  def loadThresholds(self):
-  #      with open('../thresholds.json') as data_file:
-  #          data = json.loads(data_file.read())
-  #      return data
+    def loadThresholds(self):
+        with open(os.path.dirname(__file__) + '/../thresholds.json') as data_file:
+            json_data = json.load(data_file)
+        data = {}
+        for entry in json_data:
+            high = entry['high']
+            low = entry['low']
+            data[entry['color']] = vision_utils.Thresholds(upperThresh=(high['hue'],high['sat'],high['val']), lowerThresh=(low['hue'],low['sat'],low['val']))
+        return data
 
 if __name__ == '__main__':
     rospy.init_node('vision_server')
