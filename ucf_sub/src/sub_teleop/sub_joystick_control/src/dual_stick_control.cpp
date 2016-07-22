@@ -40,8 +40,8 @@ public:
       ROS_INFO("JOYSTICK ERROR");
       return;
     }
-    twistMsg.linear.x = msg.axes[0];
-    twistMsg.linear.y = msg.axes[1];
+    twistMsg.linear.x = msg.axes[1];
+    twistMsg.linear.y = msg.axes[0];
     twistMsg.linear.z = msg.axes[2];
     ROS_INFO("TRANSLATION UPDATED");
   }

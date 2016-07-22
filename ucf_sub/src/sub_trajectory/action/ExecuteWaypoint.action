@@ -1,0 +1,12 @@
+#goal
+geometry_msgs/Twist targetTwist
+geometry_msgs/Pose targetPose
+---
+#result
+bool Ok
+---
+#feedback
+float32 distanceError
+float32 rotationError
+float32 velocityError
+float32 angularVelError
